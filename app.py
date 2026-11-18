@@ -17,6 +17,25 @@ app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 model = None
 model_error = None
 
+INPUT_SIZE = 200
+
+
+def prepare_image(image: Image.Image) -> np.ndarray:
+    """Match the notebook's evaluation transform: RGB, center crop, or pad."""
+    image = image.convert("RGB")
+    width, height = image.size
+    if width >= INPUT_SIZE and height >= INPUT_SIZE:
+        left = (width - INPUT_SIZE) // 2
+        top = (height - INPUT_SIZE) // 2
+        image = image.crop((left, top, left + INPUT_SIZE, top + INPUT_SIZE))
+    else:
+        canvas = Image.new("RGB", (INPUT_SIZE, INPUT_SIZE))
+        left = (INPUT_SIZE - width) // 2
+        top = (INPUT_SIZE - height) // 2
+        canvas.paste(image, (left, top))
+        image = canvas
+    return np.asarray(image, dtype=np.uint8)[None, ...]
+
 
 def load_model():
     global model, model_error
@@ -54,8 +73,9 @@ def index():
 def status():
     load_model()
     return jsonify({"ready": model is not None, "model": MODEL_PATH.name,
-                    "error": model_error, "input_size": 200,
-                    "labels": {"0": "Authentic", "1": "Manipulated"}})
+                    "error": model_error, "input_size": INPUT_SIZE,
+                    "labels": {"0": "Real", "1": "Synthetic"},
+                    "task": "Detects synthetic images from the Face Synthetics dataset; it is not a general deepfake detector."})
 
 
 @app.post("/api/predict")
@@ -78,24 +98,14 @@ def predict():
         if not upload.filename:
             continue
         try:
-            image = Image.open(io.BytesIO(upload.read())).convert("RGB")
+            image = Image.open(io.BytesIO(upload.read()))
             width, height = image.size
-            # Matches the notebook's deterministic center crop / pad pipeline.
-            w, h = image.size
-            if w >= 200 and h >= 200:
-                left, top = (w - 200) // 2, (h - 200) // 2
-                image = image.crop((left, top, left + 200, top + 200))
-            else:
-                canvas = Image.new("RGB", (200, 200))
-                left, top = (200 - w) // 2, (200 - h) // 2
-                canvas.paste(image, (left, top))
-                image = canvas
-            array = np.asarray(image, dtype=np.uint8)[None, ...]
+            array = prepare_image(image)
             started = time.perf_counter()
             score = float(np.asarray(model.predict(array, verbose=0)).reshape(-1)[0])
             elapsed = (time.perf_counter() - started) * 1000
             results.append({"filename": upload.filename, "width": width, "height": height,
-                            "score": score, "label": "Manipulated" if score >= threshold else "Authentic",
+                            "score": score, "label": "Synthetic" if score >= threshold else "Real",
                             "confidence": score if score >= threshold else 1 - score,
                             "latency_ms": round(elapsed, 1)})
         except (UnidentifiedImageError, OSError, ValueError) as exc:

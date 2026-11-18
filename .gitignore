@@ -1,0 +1,48 @@
+
+# Python virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Model weights and checkpoints
+*.keras
+*.h5
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+
+# Generated files
+generated.png
+generated/
+outputs/
+results/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# IDE and editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak

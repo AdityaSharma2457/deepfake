@@ -37,6 +37,10 @@ export default {
       const images = form.getAll("images").filter((value) => value instanceof File && value.name);
       if (!images.length) return json({ error: "Choose at least one image." }, 400);
       if (images.length > 20) return json({ error: "Upload at most 20 images per request." }, 400);
+      const uploadBytes = images.reduce((total, image) => total + image.size, 0);
+      if (uploadBytes > MAX_REQUEST_BYTES) {
+        return json({ error: "Upload is too large. The limit is 20 MB per request." }, 413);
+      }
       const threshold = Number(form.get("threshold") ?? 0.5);
       if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) {
         return json({ error: "Threshold must be between 0 and 1." }, 400);

@@ -46,3 +46,8 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+
+# Cloudflare Workers
+node_modules/
+.wrangler/
+.dev.vars
